@@ -8,4 +8,5 @@ usa_Flu_J_proxy_Data.rda/usa_Flu_J_proxy_Data.csv are the raw data. data process
   
 ## Analyses  
   
-
+1) Generalized additive model: GAM_final.R.  
+2) Empirical dynamic modeling: EDM_final.R is used to produce the results, and EDM_final_plot.R is used to plot the results.     
