@@ -4,10 +4,8 @@ This repository contains all the codes used to produce the results of the USA-FL
 ## Data   
 The Data folder contains all the data used in this study.  
   
-usa_Flu_J_proxy_Data.rda/usa_Flu_J_proxy_Data.csv are the raw data. PCMCI+.R file is used to produce the data to be used in state-specific (usaflu_raw.csv) and nation-specific (usaflu_norm.csv) PCMCI+ analyses.   
-  
 ## Analyses  
   
-1) Generalized additive model: GAM_final.R.  
-2) Empirical dynamic modeling: EDM_final.R is used to produce the results, and EDM_final_plot.R is used to plot the results.   
-3) PCMCI+: PCMCI+_final_state.py is used to produce state-specific results, and PCMCI+_final_overall.py is used to produce the overall results.      
+1) GAM folder: Generalized additive model, GAM_M.R.  
+2) EDM folder: Empirical dynamic modeling, EDM_M.R.   
+3) PCMCI+ folder: USA_FLU_M.ipynb. data_processing_M.R file is used to produce the data to be used in state-specific (usaflu_raw_M.csv) and nation-specific (usaflu_norm_M.csv) PCMCI+ analyses.        
