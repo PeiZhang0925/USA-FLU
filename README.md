@@ -37,10 +37,10 @@ The Analyses folder contains all the codes used in this study.
    
 **EDM.R** contains all the codes for EDM analysis. The main steps in this file are listed below (also clearly shown in the R file):   
   
-(1) Calculate noise factors for surrogate data of environmental variables. By this step, state-wise best noise factor values can be obtained for the production of surrogate data in the fifth step MFI significance test.     
-(2) Determine optimal E for the system. E is the demension used to reconstruct the dynamic system. The E leading to the best predictive performance is selected in this step for subsequent analyses.  
-(3) Determine optimal theta for S-map. θ is the parameter controlling nonlinearity. The greater the θ, the larger the nonlinearity. Here θ peaks the predictive performance is selected for next analyses.    
-(4) Calculate state-specific forecast improvement. Forecast improvement can be used to evaluate the causal relationship between variables. By this step, we are going to compare the effects of temperature, absolute humidity, and ozone on flu.    
-(5) MFI significance test. We test if the relationship between environmental variables and flu are significant in this step by compare the predictive performace of real data and surrogate data.       
-(6) Effect strength. The partial derivate of smap represents the effect stength. After testing the significance of relationships, we calculate corresponding effect strength in this step.    
+(1) **Calculate noise factors for surrogate data of environmental variables**. By this step, state-wise best noise factor values can be obtained for the production of surrogate data in the fifth step MFI significance test.     
+(2) **Determine optimal E for the system**. E is the demension used to reconstruct the dynamic system. The E leading to the best predictive performance is selected in this step for subsequent analyses.  
+(3) **Determine optimal theta for S-map**. θ is the parameter controlling nonlinearity. The greater the θ, the larger the nonlinearity. Here θ peaks the predictive performance is selected for next analyses.    
+(4) **Calculate state-specific forecast improvement**. Forecast improvement can be used to evaluate the causal relationship between variables. By this step, we are going to compare the effects of temperature, absolute humidity, and ozone on flu.    
+(5) **MFI significance test**. We test if the relationship between environmental variables and flu are significant in this step by compare the predictive performace of real data and surrogate data.       
+(6) **Effect strength**. The partial derivate of smap represents the effect stength. After testing the significance of relationships, we calculate corresponding effect strength in this step.    
   
