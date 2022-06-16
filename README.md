@@ -14,7 +14,7 @@ The Data folder contains all the data used in this study.
 The Analyses folder contains all the codes used in this study.  
   
 (1) R_functions.R   
-(2) GAM.R 
+(2) GAM.R       
 (3) PCMCI_data_processing.R   
 (4) PCMCI+.py  
 (5) EDM.R   
