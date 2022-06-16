@@ -15,7 +15,7 @@ library(mgcv); library(imputeTS)
 
 ################################## Load data and functions ###################################
 
-load("usa_Flu_P_proxy_Data_B.rda")
+load("Data_fluseason.rda")
 source("R_functions.R")
 
 dfA=usa_Flu_P_proxy_Data_B %>%

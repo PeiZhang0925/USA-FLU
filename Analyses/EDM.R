@@ -18,7 +18,7 @@ cores=ifelse(cores_all<9,4,cores_all-2)
 core_type='PSOCK'
 
 ## load data and functions
-load("usa_Flu_P_proxy_Data_B.rda")
+load("Data_fluseason.rda")
 source("R_functions.R")
 
 ## logit transformation of fluP
@@ -36,7 +36,7 @@ df_smapc=dfA %>% group_by(state) %>%
 ################### Calculate noise factors for surrogate data of environmental variables (the whole-year data) #######################
 
 # whole-year environmental data
-load("usa_Flu_P_proxy_Data_full_B.rda")
+load("Data_wholeyear.rda")
 
 # normalization of variables
 dfB=usa_Flu_P_proxy_Data_full_B 
@@ -191,7 +191,7 @@ dfg2  <- dfg2 %>% filter(plt=="o3")
 p_function(x='rho',pH=0.95,pL=0.05)
 
 
-################################################## S-map: effect strength #################################################
+################################################## Effect strength #################################################
 
 plist=list(data=list(df_smapc),
            ST=unique(df_smapc$state),

@@ -5,7 +5,7 @@ rm(list = ls())
 packages=c('tidyverse','knitr','lubridate')
 lapply(packages, require, character.only=T) 
 
-load("usa_Flu_P_proxy_Data_B.rda")
+load("Data_fluseason.rda")
 source("R_functions.R")
 
 # logit transformation
