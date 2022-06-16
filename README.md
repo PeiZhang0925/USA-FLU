@@ -17,15 +17,19 @@ The Analyses folder contains all the codes used in this study.
 2) PCMCI_data_processing.R   
 3) GAM.R  
 4) PCMCI+.py  
-5) EDM   
+5) EDM.R   
   
 ### Functions    
   
-To make the codes files more readable and userfriendly, we created this **R_functions.R** R file. All R functions used in GAM, PCMCI+, and EDM have been included. To load these functions, just use code ```source("R_functions.R")```.
+**R_functions.R** file is created to make the codes files more readable and userfriendly. All R functions used in GAM, PCMCI+, and EDM have been included in this file. To load these functions, just use code ```source("R_functions.R")```.
    
 ### 1. GAM   
   
+**GAM.R** file is used for the GAM analysis. In this file, we first build GAM to obtain beta results. Then we transform beta results to risk ratio (RR) of each IQR change to be comparable to existing evidence.  
+  
 ### 2. PCMCI+   
+  
+**PCMCI_data_processing.R** file is for the data processing of PCMCI+ analysis (Run this file first before PCMCI+ analysis). After running this file, we can get usaflu_raw.csv for state-specific PCMCI+ analysis and usaflu_norm.csv for overall PCMCI+ analysis. 
   
 ### 3. EDM   
    
