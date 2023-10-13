@@ -17,6 +17,6 @@ The Analyses folder contains all the codes used in this study.
   
 **Codes**        
 - EDM.R — codes for Empirical Dynamic Modeling (EDM) analyses    
-- PCMCI+.R — codes for Peter-Clark-momentary-conditional-independence plus (PCMCI+) analyses         
+- PCMCI+.py — codes for Peter-Clark-momentary-conditional-independence plus (PCMCI+) analyses         
 - GLM.R —- codes for Generalized Linear Model (GLM) analyses  
   
