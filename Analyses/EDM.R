@@ -1,7 +1,7 @@
 ################################## Load packages, data, and functions ###################################
 # packages
 packages=c('tidyverse','knitr','lubridate','rEDM','metap',
-           'doParallel','foreach','imputeTS')
+           'doParallel','foreach','imputeTS', "kableExtra")
 lapply(packages, require, character.only=T)
 
 # parallel computing parameters
@@ -13,7 +13,9 @@ num_sample=100
 num_surr=1000
 
 ## load data and functions
-df <- read.csv("state_ky.csv")[,-1]
+load("Data_fluseason.rda")
+df <- usa_Flu_P_proxy_Data_B
+# df <- read.csv("state_ky.csv")[,-1]
 df$date <- as.Date(df$date )
 
 ## logit transformation of fluP
@@ -30,7 +32,9 @@ df_smapc=dfA %>% mutate_at(3:ncol(.),normFunc) %>% ungroup()
 ################### Calculate noise factors for surrogate data of environmental variables (the whole-year data) #######################
 
 # whole-year environmental data
-df <- read.csv("state_ky_full.csv")[,-1] %>% as.data.frame()
+load("Data_wholeyear.rda")
+df <- usa_Flu_P_proxy_Data_full_B
+# df <- read.csv("state_ky_full.csv")[,-1] %>% as.data.frame()
 df$date <- as.Date(df$date)
 
 # normalization of variables
@@ -436,7 +440,7 @@ stopCluster(cl)
 tempA <- C_out %>%   group_by(tp_value,E,dis,plt,ST) %>%
   summarise(effect=mean(effect,na.rm=T))
 
-tempA <- tempA %>% filter(plt=="o3")
+tempA <- tempA %>% filter(plt=="o3") %>% mutate(ST="KY")
 
 ggplot(tempA,aes(tp_value,effect))+geom_line()+geom_hline(yintercept = 0) +
   ylab("Effect size")+
