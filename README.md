@@ -1,22 +1,10 @@
 # USA-FLU
    
-This repository contains the codes and data used to produce the results of the USA-FLU paper (take state Kentucky for example).
+This repository contains the codes and data used to produce the results of the USA-FLU paper (take the state Kentucky for example in the step-by-step demonstration of data analysis file).
   
-## Data   
-  
-The Data folder contains the data used.  
-  
-**Data**         
-- state_ky.csv — raw flu season data with environmental and influenza variables         
-- state_ky_full.csv — raw full data with environmental and influenza variables for surrogate data generation in EDM analyses        
-- state_ky_processed.csv — processed data with environmental and influenza variables for PCMCI+ analyses          
+- Analyses — This folder contains all the codes.            
+- Data_USA — This folder contains all the data used.             
+- Data_KY — This folder contains the data of Kentucky, used for the step-by-step demonstration of data analysis file.   
        
-## Analyses  
-  
-The Analyses folder contains all the codes used in this study.  
-  
-**Codes**        
-- EDM.R — codes for Empirical Dynamic Modeling (EDM) analyses    
-- PCMCI+.py — codes for Peter-Clark-momentary-conditional-independence plus (PCMCI+) analyses         
-- GLM.R —- codes for Generalized Linear Model (GLM) analyses  
+
   
