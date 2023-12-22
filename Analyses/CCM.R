@@ -1,7 +1,11 @@
 ################################## Load packages, data, and functions ###################################
 # packages
 packages=c('tidyverse','knitr','lubridate','rEDM','metap',
-           'doParallel','foreach','imputeTS', "kableExtra")
+           'doParallel','foreach','imputeTS', "kableExtra",
+           'ggplot2', 'ggpubr', 'ggthemes', 'cowplot',
+           'customLayout', 'patchwork', 'grid', 'gridExtra',
+           'usmap', 'maps', 'metap', 'scales', 'ggridges',
+           'ggforce', 'ggbeeswarm')
 lapply(packages, require, character.only=T)
 
 # parallel computing parameters
@@ -453,12 +457,12 @@ C_out=foreach(i = 1:nrow(plist),
 
 stopCluster(cl)
 
-################################################ Plotting #################################################
+############################### Plotting CCM Causality Test ###############################
 # Reshape the CCM output: causality test
 ccm_causal <- ccm_out %>%
   full_join(ccm_p, by = c("ST","plt","dis",'E','tp_value')) %>%
   mutate(grp=ifelse(i==1,'raw','surr'), 
-         sig=ifelse(p<=0.05 & rho_raw>0, 'sig', 'non_sig'),
+         sig=ifelse(p<0.05 & rho_raw>0, 'sig', 'non_sig'),
          sig=factor(sig, levels=c("non_sig","sig"))) %>%
   group_by(grp,ST,plt,tp_value) %>%
   mutate(Q50=quantile(rho, 0.5),
@@ -470,8 +474,85 @@ ccm_causal <- ccm_out %>%
 
 abc_ST_levels <- str_sort(toupper(unique(ccm_causal$ST)),decreasing=F)
 ccm_causal <- ccm_causal %>%
-  mutate(ST=factor(toupper(ST), levels= abc_ST_levels))
+  mutate(ST=factor(toupper(ST), levels= abc_ST_levels)) %>% 
+  mutate(plt=factor(plt, levels=c( "o3","ah", "temp"),
+                    labels=c("O[3]", "AH", "T"))) 
 
+# Plot state-specific CCM results with significance test using surrogate data
+mytheme <- theme_bw() +
+  theme(panel.border = element_blank(),
+        panel.background = element_rect(fill = NA, colour ="grey90" ),
+        strip.background = element_rect(fill = NA, colour = NA),
+        strip.text.x = element_text(size = 14, color = "gray10",
+                                    face='bold',family='serif'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())+
+  theme(legend.position = c(.85, 0.025), legend.box = "horizontal",
+        legend.title=element_text(size=18,family='serif'),
+        legend.key.width= unit(1.1, 'cm'),
+        legend.text = element_text(size=14, color = "black",family='serif'),
+        legend.spacing.y = unit(0.1, 'cm'),
+        legend.background = element_rect(color = NA),
+        legend.box.margin = margin(0.1,0.1,0.1,0.1,"cm")) +
+  theme(axis.title = element_text(size=20,family='serif'),
+        axis.text= element_text(color="black", size=18,family='serif'),
+        axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+        plot.title = element_text(size = 20, hjust=0.5, family='serif'))
+
+p_ccm_all_lag1= ccm_causal %>%
+  group_by(ST,plt,tp_value) %>%
+  spread(grp,rho) %>% filter(tp_value==-1) %>% 
+  ggplot() + 
+  geom_errorbar(aes(x=fct_rev(plt),ymin=Q0,ymax=Q95),
+                width=0, size=0.8, colour="gray",
+                position = position_dodge(0.8)) +
+  geom_point(aes(x=fct_rev(plt),y=rho_raw, 
+                 shape=factor(sig)),
+             size = 4, stroke = 0.5, colour="red", 
+             position = position_dodge(0.8)) +
+  facet_wrap(~ ST, ncol = 6)+
+  scale_shape_manual(name="Surrogate test:", values = c(1,16),
+                     labels=c("Non-significant","Significant"),
+                     guide=guide_legend(order = 1)) +
+  labs(x='', y=expression(paste(Delta, rho["CCM"]))) +
+  scale_x_discrete(labels = c(expression("T"), expression("AH"), expression(O[3]))) +
+  scale_y_continuous(limits = c(-0.23, 0.51), 
+                     breaks = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5),
+                     labels = c('-0.2', '', '0', '', '0.2', '','0.4','')) +
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
+  coord_flip() + 
+  mytheme 
+
+print(p_ccm_all_lag1)
+
+# Plot nation-wide summary of CCM results
+
+dat <- ccm_causal %>% filter(grp=="raw" & tp_value==-1)  
+
+dat_label <- tibble(xpos=c('O[3]','AH','T'), ypos= rep(-0.15, 3),  
+                    lab =c("italic(P[meta]==5.7%*%10^{-5})", 
+                           "italic(P[meta]==1.8%*%10^{-2})", 
+                           "italic(P[meta]==9.4%*%10^{-2})")) 
+
+p_ccm_vs_1 <- ggplot() + 
+  geom_violin(data=dat, aes(x=fct_rev(plt), y=rho),
+              color='gray80') +
+  geom_quasirandom(data=dat, aes(x=fct_rev(plt), y=rho, shape=sig), 
+                   color="red", width=0.25, size=4, alpha=1) +
+  scale_shape_manual(values = c(1,16), guide='none')+
+  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
+  labs(x =  "", y = expression(paste(Delta, rho["CCM"])))+
+  scale_x_discrete(labels = c(expression("T"), expression("AH"), expression(O[3]))) +
+  scale_y_continuous(limits = c(-0.23, 0.51), 
+                     breaks = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5),
+                     labels = c('-0.2', '', '0', '', '0.2', '','0.4','')) +
+  geom_text(data = dat_label, aes(x=xpos, y=ypos, label=lab), 
+            parse = TRUE, family='serif', position = "nudge") +
+  coord_flip()+
+  mytheme 
+
+print(p_ccm_vs_1)
+############################### Plotting S-map Effect Size ###############################
 # Reshape the C_out output: effect strength estimates
 SEeffect<- C_out %>%
   select(date,ST,tp_value,dis,plt,effect) %>%
@@ -485,131 +566,36 @@ SEeffect_ex <- SEeffect %>% group_by(ST, tp_value,plt,dis) %>%
   filter(effect < quantile(effect, probs=.95, na.rm = T),
          effect > quantile(effect, probs=.05, na.rm = T)) # filter out the extreme values 
 
-# Prepare the plotting data set & Set the theme and palette
-smap_plotDat <- SEeffect_ex %>% 
-  filter(tp_value==-1) %>% 
-  mutate(ST=toupper(ST)) %>%
-  group_by(ST, plt) %>% 
-  summarise(effect=median(effect,na.rm=T))
+# Prepare the plotting data set 
+SE_mean_lag = SEeffect_ex %>%
+  filter(dis=="fluP", plt=='O[3]') %>%
+  group_by(ST,tp_value) %>%
+  dplyr::summarise(median_effect=median(effect,na.rm=TRUE)) %>%
+  filter(tp_value==-1) %>%
+  select(state=ST, median_effect)
 
-ccm_smap_plotDat <- ccm_causal %>% 
-  mutate(plt=factor(plt, levels=c( "o3","ah", "temp"),
-                    labels=c("O[3]", "AH", "T"))) %>%
-  group_by(ST,plt,tp_value) %>%
-  spread(grp,rho) %>% filter(tp_value==-1) %>% 
-  left_join(smap_plotDat, by=c("ST", 'plt'))
+centroid_labels <- usmapdata::centroid_labels("states")
+map_labels <- centroid_labels
 
-mytheme <- theme_bw() +
-  theme(panel.border = element_blank(),
-        panel.background = element_rect(fill = NA, colour ="grey90" ),
-        strip.background = element_rect(fill = NA, colour = NA),
-        strip.text.x = element_text(size = 14, color = "gray10",
-                                    face='bold',family='serif'),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.line = element_line(size = 0.5, linetype = "solid",
-                                 colour = "black"))+
-  theme(legend.position = c(.85, 0.025), legend.box = "horizontal",
-        legend.title=element_text(size=18,family='serif'),
-        legend.key.width= unit(1.1, 'cm'),
-        legend.text = element_text(size=14, color = "black",family='serif'),
-        legend.spacing.y = unit(0.1, 'cm'),
-        legend.background = element_rect(color = NA),
-        legend.box.margin = margin(0.1,0.1,0.1,0.1,"cm")) +
-  theme(axis.title = element_text(size=20,family='serif'),
-        axis.text= element_text(color="black", size=18,family='serif'),
-        plot.title = element_text(size = 20, hjust=0.5, family='serif'))
+# Plot state-specific median effect size onto the map
 
-mypalette <- function(x)c("#154360", "#1A5276", "#2874A6", "#3498DB", "#85C1E9", '#F5B7B1')
+p_o3SE_map <- plot_usmap(data = SE_mean_lag,
+                         values = 'median_effect',
+                         color = "grey", labels = F, label_color = "black") +
+  geom_text(data = map_labels,
+            ggplot2::aes(x = x, y = y, label = abbr),
+            color = "black", family='serif')+
+  scale_fill_gradient2(name = expression(paste("EDM effect estimates: ", O[3] %->% "Flu")),
+                       limits = c(-0.31,0.1),
+                       breaks = c(-0.3,-0.2,-0.1, 0, 0.1),
+                       midpoint = 0,
+                       low = "royalblue3", mid = "white", high = "red",na.value="gainsboro",
+                       guide=guide_colorbar(direction = "horizontal",
+                                            title.position = "top") ) +
+  theme(legend.position=c(0.56,0),
+        legend.title=element_text(size=11, family='serif'),
+        legend.text = element_text(size=8, color = "black", family='serif'),
+        legend.key.height = unit(0.5, 'cm'),
+        legend.key.width = unit(0.8, 'cm'))
 
-# Plot state-specific CCM results with significance test using surrogate data
-p_ccm_all_lag1= ggplot(ccm_smap_plotDat) + 
-  geom_errorbar(aes(x=fct_rev(plt),ymin=Q0,ymax=Q95,
-                    colour=effect),
-                width=0, size=0.8,
-                position = position_dodge(0.8)) +
-  geom_point(aes(x=fct_rev(plt),y=rho_raw, 
-                 colour=effect, shape=factor(sig)),
-             size = 4, stroke = 0.5, 
-             position = position_dodge(0.8)) +
-  facet_wrap(~ ST, ncol = 6)+
-  binned_scale(name="Effect size:", aesthetics = "color",
-               scale_name = "stepsn", palette = mypalette,
-               breaks = c(-0.50, -0.40, -0.30, -0.20, -0.10, 0, 0.10),
-               limits = c(-0.50, 0.15), show.limits = F, 
-               guide=guide_colorsteps(direction = "horizontal", 
-                                      title.position = "top", 
-                                      stepswidth = 25, order=2, label.vjust = 1)) +
-  scale_shape_manual(name="Surrogate test:", values = c(1,16),
-                   labels=c("Non-significant","Significant"),
-                   guide=guide_legend(order = 1)) +
-  labs(x='', y=expression(paste(Delta, rho["CCM"]))) +
-  scale_x_discrete(labels = c(expression("T"), expression("AH"), expression(O[3]))) +
-  scale_y_continuous(limits = c(-0.23, 0.51), 
-                     breaks = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5),
-                     labels = c('-0.2', '', '0', '', '0.2', '','0.4','')) +
-  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
-  coord_flip() + 
-  mytheme 
-
-# Plot nation-wide summary of CCM results
-dat_ccm_vs <- ccm_causal %>%
-    filter(grp=="raw" & tp_value==-1)%>%
-    mutate(plt=factor(plt, levels=c( "o3","ah", "temp"),
-                      labels=c("O[3]", "AH", "T")),
-           sig=factor(ifelse(p<=0.05, "sig", 'non-sig'),levels=c('sig',"non-sig"))) %>%
-    left_join(smap_plotDat, by=c("ST", 'plt')) 
-  
-p_ccm_vs_1 <- dat_ccm_vs %>% 
-  ggplot(aes(x=fct_rev(plt), y=rho)) +
-  geom_violin(color='gray80') +
-  geom_quasirandom(aes(color=effect, shape=sig),
-                   width=0.25, size=4, alpha=1) +
-  scale_shape_manual(values = c(16,1), guide='none')+
-  binned_scale(name="EDM effect:", aesthetics = "color",
-               scale_name = "stepsn", palette = mypalette,
-               breaks = c(-0.50, -0.40, -0.30, -0.20, -0.10, 0, 0.10),
-               limits = c(-0.50, 0.15), show.limits = F, guide="none") +
-  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
-  labs(x =  "", y = expression(paste(Delta, rho["CCM"])))+
-  scale_x_discrete(labels = c(expression("T"), expression("AH"), expression(O[3]))) +
-  scale_y_continuous(limits = c(-0.23, 0.51), 
-                     breaks = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5),
-                     labels = c('-0.2', '', '0', '', '0.2', '','0.4','')) +
-  coord_flip()+
-  mytheme 
-
-# Plot nation-wide summary of effect strength estimates
-dat_se_vs <- ccm_smap_plotDat %>% 
-  filter(!is.na(raw)) %>%
-  mutate(plt_sig=ifelse(plt=='O[3]', "sig", 'non-sig'),
-         plt_sig=factor(plt_sig, levels=c('sig',"non-sig")))
-
-p_se_vs_1 <- dat_se_vs %>% 
-  ggplot(aes(x=fct_rev(plt), y=effect)) +
-  geom_violin(color='gray80') +
-  geom_quasirandom(aes(color=effect, shape=sig),
-                   width=0.25, size=4, alpha=1) +
-  scale_shape_manual(values = c(1,16), guide='none')+
-  binned_scale(name="EDM effect:", aesthetics = "color",
-               scale_name = "stepsn", palette = mypalette,
-               breaks = c(-0.50, -0.40, -0.30, -0.20, -0.10, 0, 0.10),
-               limits = c(-0.50, 0.15), show.limits = F,  guide="none") +
-  geom_hline(yintercept = 0, linetype = 2, color = "gray") +
-  labs(x =  "", y = expression(paste('Effect size (', partialdiff, 'Flu/', partialdiff, 'Var)')))+
-  scale_x_discrete(labels = c(expression("T"), expression("AH"), expression(O[3]))) +
-  scale_y_continuous(limits = c(-0.22, 0.06), 
-                     breaks = c(-0.2, -0.15, -0.1, -0.05, 0, 0.05),
-                     labels = c('-0.2', '-0.15', '-0.1', '-0.05', '0', '0.05')) +
-  coord_flip()+
-  mytheme
-
-p_ccm_Smap_all <- ggarrange(p_ccm_all_lag1, 
-                            ggarrange(p_ccm_vs_1, p_se_vs_1),
-                            nrow = 2,
-                            heights = c(8, 2.5),
-                            common.legend = F,
-                            align = "hv")
-#+ fig.height=12,fig.width=10
-p_ccm_Smap_all
-#+
+print(p_o3SE_map)

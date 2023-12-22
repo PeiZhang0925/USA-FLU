@@ -161,10 +161,10 @@ dat_glm_ST <- df_gam_final %>%
   mutate(state=factor(state, levels= abc_levels)) 
 
 p_glm_ST_lag1= ggplot(dat_glm_ST) + 
-  geom_errorbar(aes(ymin=SizeL, ymax=SizeH, x=plt),
+  geom_errorbar(aes(ymin=SizeL, ymax=SizeH, x=plt), color='gray',
                 position = position_dodge(0.8), width=0, size=0.8) +
   geom_point(aes(y=Size, x=plt, shape=sig),
-             fill='black', size=4, stroke = 0.5,
+             color='red', size=4, stroke = 0.5,
              position = position_dodge(0.8))+
   facet_wrap(~ state, ncol = 6)+
   scale_shape_manual(name="Statistical significance test:", values = c(1,16),
@@ -180,10 +180,10 @@ dat_glm_ALL <- df_gam_final %>%
   filter(state=='ALL' & lag=='Lag 1')
 
 p_glm_vs_1 <- ggplot(dat_glm_ALL) +
-  geom_errorbar(aes(ymin=SizeL, ymax=SizeH, x=plt),
+  geom_errorbar(aes(ymin=SizeL, ymax=SizeH, x=plt), color='gray',
                 position = position_dodge(0.8), width=0,linewidth=1) +
   geom_point(aes(y=Size, x=plt, shape=sig),
-             fill='black', size=4, stroke = 0.5,
+             color='red', size=4, stroke = 0.5,
              position = position_dodge(0.8))+
   scale_shape_manual(guide="none",values = c(1,16)) +
   labs(x='',y=expression(paste(beta, ' estimates in GLM'))) + 
