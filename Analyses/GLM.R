@@ -128,9 +128,12 @@ df_gam_final=rbind(df1,df2,df3) %>%
   mutate(Size=beta*SD,SizeL=betalow*SD,SizeH=betahigh*SD) %>%
   select(state, plt, lag, Size, SizeL, SizeH, gam.p=p) %>%
   mutate(sig=ifelse(gam.p<0.05, 'sig', 'non_sig'),
-         sig=factor(sig, levels=c("non_sig","sig")),
-         plt=factor(plt, levels=c('temp', 'ah', 'o3')))
+         sig=factor(sig, levels=c("non_sig","sig"))) %>% 
+  mutate(plt=factor(plt, levels=c( "o3","ah", "temp"),
+                    labels=c("O[3]", "AH", "T")))
 
+df_gam_final %>% 
+  filter(state=='ALL')
 ########################################## Plot ##########################################
 mytheme <- theme_bw() +
   theme(panel.border = element_blank(),
@@ -161,9 +164,9 @@ dat_glm_ST <- df_gam_final %>%
   mutate(state=factor(state, levels= abc_levels)) 
 
 p_glm_ST_lag1= ggplot(dat_glm_ST) + 
-  geom_errorbar(aes(ymin=SizeL, ymax=SizeH, x=plt), color='gray',
+  geom_errorbar(aes(ymin=SizeL, ymax=SizeH, x=fct_rev(plt)), color='gray',
                 position = position_dodge(0.8), width=0, size=0.8) +
-  geom_point(aes(y=Size, x=plt, shape=sig),
+  geom_point(aes(y=Size, x=fct_rev(plt), shape=sig),
              color='red', size=4, stroke = 0.5,
              position = position_dodge(0.8))+
   facet_wrap(~ state, ncol = 6)+
@@ -180,9 +183,9 @@ dat_glm_ALL <- df_gam_final %>%
   filter(state=='ALL' & lag=='Lag 1')
 
 p_glm_vs_1 <- ggplot(dat_glm_ALL) +
-  geom_errorbar(aes(ymin=SizeL, ymax=SizeH, x=plt), color='gray',
+  geom_errorbar(aes(ymin=SizeL, ymax=SizeH, x=fct_rev(plt)), color='gray',
                 position = position_dodge(0.8), width=0,linewidth=1) +
-  geom_point(aes(y=Size, x=plt, shape=sig),
+  geom_point(aes(y=Size, x=fct_rev(plt), shape=sig),
              color='red', size=4, stroke = 0.5,
              position = position_dodge(0.8))+
   scale_shape_manual(guide="none",values = c(1,16)) +
@@ -190,7 +193,8 @@ p_glm_vs_1 <- ggplot(dat_glm_ALL) +
   scale_x_discrete(labels = c(expression("T"), expression("AH"), expression(O[3]))) +
   geom_hline(yintercept = 0, linetype = 2, color = "grey") +
   coord_flip() +
-  mytheme
+  mytheme +
+  theme(panel.background = element_blank())
 
 p_glm_vs_1_arrange = ggarrange(NULL,p_glm_vs_1,NULL,
                                nrow = 1, ncol = 3,

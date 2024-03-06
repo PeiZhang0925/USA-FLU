@@ -19,7 +19,6 @@ num_surr=1000
 ## load data and functions
 load("Data_fluseason.rda")
 df <- usa_Flu_P_proxy_Data_B
-# df <- read.csv("state_ky.csv")[,-1]
 df$date <- as.Date(df$date )
 
 ## logit transformation of fluP
@@ -31,14 +30,14 @@ dfA$fluP <- dfA$logitfluP
 ## normalization of variables
 normFunc=function(x){(x-mean(x, na.rm = T))/sd(x, na.rm = T)}
 
-df_smapc=dfA %>% mutate_at(3:ncol(.),normFunc) %>% ungroup()
+df_smapc=dfA %>% group_by(state) %>% 
+  mutate_at(3:ncol(.),normFunc) %>% ungroup()
 
 ################### Calculate noise factors for surrogate data of environmental variables (the whole-year data) #######################
 
 # whole-year environmental data
 load("Data_wholeyear.rda")
 df <- usa_Flu_P_proxy_Data_full_B
-# df <- read.csv("state_ky_full.csv")[,-1] %>% as.data.frame()
 df$date <- as.Date(df$date)
 
 # normalization of variables
@@ -47,9 +46,6 @@ dfB_smapc=dfB %>% group_by(state) %>%
   mutate_at(3:ncol(.),normFunc) %>% ungroup()
 
 #select variables
-df_flu=dfB_smapc %>% select(date,state,ah,o3,temp) %>%
-  group_by(state) %>% gather(key,value,-c(date,state))
-
 df_flu <- dfB_smapc %>%
   select(date, state, ah, o3, temp) %>%
   mutate_at(vars(ah, o3, temp), ~{attributes(.) <- NULL; .}) %>%
@@ -91,7 +87,6 @@ fn_state_spar=function(states,keys){
   spar=spars[which.min(ss)]
   data.frame(state=states,plt=keys,spar)
 }
-
 
 plist=list(states=unique(df_flu$state),
            keys=c('o3','ah','temp')) %>% cross_df()
@@ -219,7 +214,7 @@ plist=list(data=list(df_smapc),y=c('fluP'),ST=unique(dfA$state)) %>%
   cross_df()
 
 E_smapc_out=plist %>% pmap_df(fn_E_smapc)
-
+ 
 E_smapc =E_smapc_out %>% filter(E %in% 2:6) %>%
   group_by(dis,ST) %>%
   filter(rho==max(rho))  %>%
@@ -288,7 +283,7 @@ fn_season_ccm=function(data,ST,x,y,tp_value){
   alpha=sd_data %>% filter(states==ST & plt==x) %>%
     select(sd_PNAS) %>% pull()
   
-  surr_data <- fn_surr_data(dfB,ST,x,0)
+  surr_data <- fn_surr_data(dfB_smapc,ST,x,0)
   
   all_data <- df %>% left_join(surr_data,by="date")
   
@@ -320,8 +315,8 @@ fn_season_ccm=function(data,ST,x,y,tp_value){
   rho_surr
 }
 
-plist=list(data=list(dfA),
-           ST=unique(dfA$state),
+plist=list(data=list(df_smapc),
+           ST=unique(df_smapc$state),
            y=c('fluP'),
            x=c('o3',"temp","ah"),
            tp_value=-2:0) %>% cross_df()
@@ -337,13 +332,14 @@ ccm_out=foreach(j = 1:nrow(plist),
                 }
 stopCluster(cl)
 
+ 
 # Calculate the difference in cross-mapping skills obtained by the maximum and the minimum library to test convergence property
-dat_min <- ccm_out %>% filter(lib<50) 
+dat_min <- ccm_out %>% filter(lib<50)
 dat_min <- dat_min[order(dat_min$state,dat_min$tp_value,dat_min$plt,dat_min$dis,dat_min$i),]
-dat_max <- ccm_out %>% filter(lib>50) 
+dat_max <- ccm_out %>% filter(lib>50)
 dat_max <- dat_max[order(dat_max$state,dat_max$tp_value,dat_max$plt,dat_max$dis,dat_max$i),]
 
-dat <- cbind(dat_max,dat_min[,"rho"]) 
+dat <- cbind(dat_max,dat_min[,"rho"])
 names(dat) <- c("lib","rho_max","i","dis","plt","E","tp_value","ST","rho_min")
 
 dat1 <- dat %>% mutate(rho=rho_max-rho_min)
@@ -356,8 +352,8 @@ ccm_out_raw = ccm_out  %>%
 # Calculate the P value of significance test by comparing the original CCM skill against the null distribution of surrogate ones.
 ccm_p=ccm_out %>%
   group_by(dis,plt,E,ST,tp_value) %>%
-  summarise(p=1-ecdf(rho[i != 1])(rho[i == 1])) %>% 
-  left_join(ccm_out_raw, by=c("plt", "ST", "tp_value")) %>% 
+  summarise(p=1-ecdf(rho[i != 1])(rho[i == 1])) %>%
+  left_join(ccm_out_raw, by=c("plt", "ST", "tp_value")) %>%
   rename(rho_raw=rho) %>%
   arrange(dis,plt)
 
@@ -366,11 +362,11 @@ ccm_p %>% filter(rho_raw<=0)
 
 # Adjust extreme P values before meta-significance test
 # If P is extremely small approximating 0, then P is deemed as 0.005 allowing for Fisher's meta-significance test
-# If original CCM skill is <0, then P is deemed as 1, that is accepting the null hypothesis exactly. 
+# If original CCM skill is <0, then P is deemed as 1, that is accepting the null hypothesis exactly.
 
 ccm_p=ccm_p %>%
-  mutate(p=ifelse(p==0, 0.0005, p)) %>% 
-  mutate(p=ifelse(rho_raw<=0, 1, p))   
+  mutate(p=ifelse(p==0, 0.0005, p)) %>%
+  mutate(p=ifelse(rho_raw<=0, 1, p))
 
 # Calculate meta-significance test using Fisher's method.
 
@@ -438,7 +434,7 @@ fn_smapc=function(data,ST,plt,dis,tp_value){
     mutate(dis=dis,ST=ST, plt=plt,E=E,tp_value=tp_value)
 }
 
-plist=list(data=list(df_smapc),
+plist=list(data=list(df_smapc), # updated: group by state before normalize
            ST=unique(df_smapc$state),
            dis=c('fluP'),
            plt=c('o3','ah','temp'),
@@ -461,7 +457,7 @@ stopCluster(cl)
 # Reshape the CCM output: causality test
 ccm_causal <- ccm_out %>%
   full_join(ccm_p, by = c("ST","plt","dis",'E','tp_value')) %>%
-  mutate(grp=ifelse(i==1,'raw','surr'), 
+  mutate(grp=ifelse(i==1,'raw','surr'),
          sig=ifelse(p<0.05 & rho_raw>0, 'sig', 'non_sig'),
          sig=factor(sig, levels=c("non_sig","sig"))) %>%
   group_by(grp,ST,plt,tp_value) %>%
@@ -474,9 +470,9 @@ ccm_causal <- ccm_out %>%
 
 abc_ST_levels <- str_sort(toupper(unique(ccm_causal$ST)),decreasing=F)
 ccm_causal <- ccm_causal %>%
-  mutate(ST=factor(toupper(ST), levels= abc_ST_levels)) %>% 
+  mutate(ST=factor(toupper(ST), levels= abc_ST_levels)) %>%
   mutate(plt=factor(plt, levels=c( "o3","ah", "temp"),
-                    labels=c("O[3]", "AH", "T"))) 
+                    labels=c("O[3]", "AH", "T")))
 
 # Plot state-specific CCM results with significance test using surrogate data
 mytheme <- theme_bw() +
@@ -501,14 +497,14 @@ mytheme <- theme_bw() +
 
 p_ccm_all_lag1= ccm_causal %>%
   group_by(ST,plt,tp_value) %>%
-  spread(grp,rho) %>% filter(tp_value==-1) %>% 
-  ggplot() + 
+  spread(grp,rho) %>% filter(tp_value==-1) %>%
+  ggplot() +
   geom_errorbar(aes(x=fct_rev(plt),ymin=Q0,ymax=Q95),
                 width=0, size=0.8, colour="gray",
                 position = position_dodge(0.8)) +
-  geom_point(aes(x=fct_rev(plt),y=rho_raw, 
+  geom_point(aes(x=fct_rev(plt),y=rho_raw,
                  shape=factor(sig)),
-             size = 4, stroke = 0.5, colour="red", 
+             size = 4, stroke = 0.5, colour="red",
              position = position_dodge(0.8)) +
   facet_wrap(~ ST, ncol = 6)+
   scale_shape_manual(name="Surrogate test:", values = c(1,16),
@@ -516,43 +512,45 @@ p_ccm_all_lag1= ccm_causal %>%
                      guide=guide_legend(order = 1)) +
   labs(x='', y=expression(paste(Delta, rho["CCM"]))) +
   scale_x_discrete(labels = c(expression("T"), expression("AH"), expression(O[3]))) +
-  scale_y_continuous(limits = c(-0.23, 0.51), 
+  scale_y_continuous(limits = c(-0.23, 0.51),
                      breaks = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5),
                      labels = c('-0.2', '', '0', '', '0.2', '','0.4','')) +
   geom_hline(yintercept = 0, linetype = 2, color = "gray") +
-  coord_flip() + 
-  mytheme 
+  coord_flip() +
+  mytheme
 
 print(p_ccm_all_lag1)
 
 # Plot nation-wide summary of CCM results
+dat <- ccm_causal %>% filter(grp=="raw" & tp_value==-1)
 
-dat <- ccm_causal %>% filter(grp=="raw" & tp_value==-1)  
+dat_label <- tibble(xpos=c('O[3]','AH','T'), ypos= rep(-0.52, 3),
+                    lab =c(expression(italic(P[meta]) == italic("1.9") %*% italic("10")^italic('-7')), 
+                           expression(italic(P[meta]) == italic("1.4") %*% italic("10")^italic('-2')),
+                           expression(italic(P[meta]) == italic("1.4") %*% italic("10")^italic('-1')))) 
 
-dat_label <- tibble(xpos=c('O[3]','AH','T'), ypos= rep(-0.15, 3),  
-                    lab =c("italic(P[meta]==5.7%*%10^{-5})", 
-                           "italic(P[meta]==1.8%*%10^{-2})", 
-                           "italic(P[meta]==9.4%*%10^{-2})")) 
-
-p_ccm_vs_1 <- ggplot() + 
+p_ccm_vs_1 <- ggplot() +
   geom_violin(data=dat, aes(x=fct_rev(plt), y=rho),
               color='gray80') +
-  geom_quasirandom(data=dat, aes(x=fct_rev(plt), y=rho, shape=sig), 
+  geom_quasirandom(data=dat, aes(x=fct_rev(plt), y=rho, shape=sig),
                    color="red", width=0.25, size=4, alpha=1) +
   scale_shape_manual(values = c(1,16), guide='none')+
   geom_hline(yintercept = 0, linetype = 2, color = "gray") +
   labs(x =  "", y = expression(paste(Delta, rho["CCM"])))+
   scale_x_discrete(labels = c(expression("T"), expression("AH"), expression(O[3]))) +
-  scale_y_continuous(limits = c(-0.23, 0.51), 
-                     breaks = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5),
-                     labels = c('-0.2', '', '0', '', '0.2', '','0.4','')) +
-  geom_text(data = dat_label, aes(x=xpos, y=ypos, label=lab), 
-            parse = TRUE, family='serif', position = "nudge") +
+  scale_y_continuous(limits = c(-0.6, 0.6), 
+                     breaks = c(-0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5),
+                     labels = c('-0.4', '','-0.2', '', '0', '', '0.2', '','0.4','')) +
+  geom_text(data = dat_label,
+            aes(x=xpos, y=ypos, label = lab), 
+            parse = TRUE, color='gray20', family='serif', size=5,
+            vjust=0.5, hjust=0, position = "nudge")+
   coord_flip()+
-  mytheme 
+  mytheme
 
 print(p_ccm_vs_1)
-############################### Plotting S-map Effect Size ###############################
+ 
+# ############################### Plotting S-map Effect Size ###############################
 # Reshape the C_out output: effect strength estimates
 SEeffect<- C_out %>%
   select(date,ST,tp_value,dis,plt,effect) %>%
@@ -560,13 +558,13 @@ SEeffect<- C_out %>%
                     levels=c("o3","ah", "temp"),
                     labels=c("O[3]","AH", "T"))) %>%
   mutate(tp_value=factor(tp_value,
-                         levels=c(0, -1, -2))) 
+                         levels=c(0, -1, -2)))
 
 SEeffect_ex <- SEeffect %>% group_by(ST, tp_value,plt,dis) %>%
   filter(effect < quantile(effect, probs=.95, na.rm = T),
-         effect > quantile(effect, probs=.05, na.rm = T)) # filter out the extreme values 
+         effect > quantile(effect, probs=.05, na.rm = T)) # filter out the extreme values
 
-# Prepare the plotting data set 
+# Prepare the plotting data set
 SE_mean_lag = SEeffect_ex %>%
   filter(dis=="fluP", plt=='O[3]') %>%
   group_by(ST,tp_value) %>%
@@ -578,7 +576,6 @@ centroid_labels <- usmapdata::centroid_labels("states")
 map_labels <- centroid_labels
 
 # Plot state-specific median effect size onto the map
-
 p_o3SE_map <- plot_usmap(data = SE_mean_lag,
                          values = 'median_effect',
                          color = "grey", labels = F, label_color = "black") +
